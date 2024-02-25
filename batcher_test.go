@@ -73,3 +73,21 @@ func Test_WhenJobSizeIsMoreThanBatch(t *testing.T) {
 
 	assert.Equal([]string{"Processed - Job1", "Processed - Job2", "Processed - Job3", "Processed - Job4", "Processed - Job5"}, results)
 }
+// It tests that if the shutdown is called then it won't taken any other jobs and return the last processed
+func Test_ReturnJobIfShutdown(t *testing.T) {
+	assert := assert.New(t)
+
+	jobBatcher := NewBatcher(&prefixProcessor{Prefix: "Processed - "})
+	jobBatcher.SetBatchSize(2)
+	jobBatcher.SetFrequency(20*time.Millisecond)
+
+	re1, err := jobBatcher.AddJob("Job1")
+	assert.Nil(err)
+
+	jobBatcher.Stop()
+
+	_, err = jobBatcher.AddJob("Job2")
+	assert.Equal(ErrorMessage, err)
+
+	assert.Equal("Processed - Job1", re1.GetValue())
+}
