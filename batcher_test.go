@@ -42,3 +42,34 @@ func Test_WhenBatchSizeIsSame(t *testing.T) {
 	// Ensure the results match the expected output
 	assert.ElementsMatch([]string{"Processed - Job1", "Processed - Job2", "Processed - Job3"}, results)
 }
+
+
+func Test_WhenBatchSizeISLess(t *testing.T) {
+	assert := assert.New(t)
+	jobBatcher := NewBatcher(&prefixProcessor{Prefix: "Processed - "})
+	jobBatcher.SetBatchSize(2)
+	jobBatcher.SetFrequency(20*time.Millisecond)
+
+	re1, err := jobBatcher.AddJob("1")
+	assert.Nil(err)
+
+	assert.Equal("Processed - 1", re1.GetValue())
+}
+
+func Test_WhenJobSizeIsMoreThanBatch(t *testing.T) {
+	assert := assert.New(t)
+	jobBatcher := NewBatcher(&prefixProcessor{Prefix: "Processed - "})
+	jobBatcher.SetBatchSize(2)
+	jobBatcher.SetFrequency(20*time.Millisecond)
+
+	// Define a list of job inputs
+	jobInputs := []string{"Job1", "Job2", "Job3","Job4","Job5"}
+	var results []string
+	for _, input := range jobInputs {
+		result, err := jobBatcher.AddJob(input)
+		assert.Nil(err)
+		results = append(results, result.GetValue().(string))
+	}
+
+	assert.Equal([]string{"Processed - Job1", "Processed - Job2", "Processed - Job3", "Processed - Job4", "Processed - Job5"}, results)
+}
