@@ -14,8 +14,8 @@ Easy Integration: Integrate the library seamlessly into your Go applications to 
 ````markdown
 ```go
 // Import the library
-import "github.com/yourusername/batchinglib"
-import "time"
+import "github.com/Dhruv1993/batchinglib"
+
 
 // Create a new Batcher instance
 batcher := batchinglib.NewBatcher(yourJobProcessor)
