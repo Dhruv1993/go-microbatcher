@@ -2,6 +2,7 @@ package gomicrobatcher
 
 import (
 	"errors"
+	"log"
 	"sync"
 	"time"
 )
@@ -88,7 +89,7 @@ func (b *genericBatcher) AddJob(job interface{}) (JobResult, error) {
 	jobVal := jobValue{value: job, resultCh: resultCh}
 
 	if b.unresolved == nil {
-		// b.unresolved = b.newBatch(jobVal)
+		b.unresolved = b.newBatch(jobVal)
 		return &genericJobResult{ch: resultCh}, nil
 	}
 
@@ -130,5 +131,60 @@ func (b *genericBatcher) Stop() {
 	if b.unresolved != nil {
 		b.unresolved.stop()
 		b.unresolved = nil
+	}
+}
+
+func newTimerWithStop(d time.Duration) timerWithStop {
+	t := time.NewTimer(d)
+	return timerWithStop{
+		timer:t ,
+		stopCh: make(chan bool, 1), // buffered channel
+		
+	}
+}
+
+func (b *genericBatcher) newBatch(firstJob jobValue) *GenericBatch {
+	timer := newTimerWithStop(b.frequency)
+
+	currentBatch := GenericBatch{
+		values: []jobValue{firstJob},
+		timer:  &timer,
+	}
+
+	go func() {
+		select {
+		case <-timer.stopCh:
+		case <-timer.timer.C:
+			log.Print("time expired")
+			b.mu.Lock()
+			b.unresolved = nil
+			b.mu.Unlock()
+		}
+
+		b.executeBatch(currentBatch.values)
+	}()
+
+	return &currentBatch
+}
+
+func (b *genericBatcher) executeBatch(jobValues []jobValue) {
+	values := make([]interface{}, len(jobValues))
+	for i, jv := range jobValues {
+		values[i] = jv.value
+	}
+
+	results := b.processor.Process(values)
+
+	if len(results) != len(values) {
+		panic("batch processor must produce a result for each value.")
+	}
+
+	for i, r := range results {
+		jv := jobValues[i]
+		select {
+		case jv.resultCh <- r:
+		default:
+			log.Print("result channel closed or full")
+		}
 	}
 }
