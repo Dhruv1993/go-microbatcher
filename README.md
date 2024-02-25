@@ -18,11 +18,10 @@ import "github.com/yourusername/batchinglib"
 import "time"
 
 // Create a new Batcher instance
-batcher := batchinglib.NewBatcher(yourJobProcessor, 5, 10*time.Millisecond)
+batcher := batchinglib.NewBatcher(yourJobProcessor)
 
 // Set custom parameters
 batcher.SetBatchSize(10)
-batcher.SetLingerDuration(20 * time.Millisecond)
-batcher.SetFrequency(1 * time.Second)
+batcher.SetFrequency(20 * time.Millisecond)
 ```
 ````
